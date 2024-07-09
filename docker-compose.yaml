@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  webserver:
+    image: nginx
+    container_name: webserversister
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "1001:80"
+    volumes:
+      - ./src:/var/www
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    links:
+      - php
+    networks:
+      - laravel_docker-networks
+
+
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: php:8.1-fpm
+    container_name: php-fpm
+    restart: unless-stopped
+    tty: true
+    environment:
+      - SERVICE_NAME=php
+      - SERVICE_TAGS=dev
+    working_dir: /var/www
+    volumes:
+      - ./src:/var/www
+      - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - laravel_docker-networks
+
+  db:
+    image: mysql:latest
+    container_name: database-sister
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "4306:3306"
+    environment:
+      MYSQL_DATABASE: sister
+      MYSQL_USER: user
+      MYSQL_PASSWORD: user
+      MYSQL_ROOT_PASSWORD: root
+      SERVICE_NAME: mysql
+      SERVICE_TAGS: dev
+    volumes:
+      - db:/var/lib/mysql
+      - ./mysql/my.conf:/etc/mysql/my.conf
+    networks:
+      - laravel_docker-networks
+
+  phpmyadmin:
+    depends_on:
+      - db
+    image: phpmyadmin:latest
+    container_name: phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "1002:80"
+    environment:
+      - PMA_HOST=db
+    networks:
+      - laravel_docker-networks
+
+networks:
+  laravel_docker-networks:
+    driver: bridge
+
+volumes:
+  db:
+    driver: local
